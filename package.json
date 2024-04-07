@@ -1,0 +1,18 @@
+{
+  "name": "height-app-api",
+  "version": "1.0.0",
+  "description": "Explore and extract my app data from Height.app",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "height-app-api": "^1.0.6",
+    "mongodb": "^6.5.0"
+  }
+}
