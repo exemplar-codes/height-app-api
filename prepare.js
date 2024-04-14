@@ -4,7 +4,8 @@
         1. Take care of basic attributes ✅
         2. Take care of comments - will become side page ✅
         3. Take care of height attributes, have to take care of all. ✅
-    3. Hit Notion API and insert rows
+    3. Hit Notion API and insert rows ✅
+    4. Fix nesting, by setting parent for each Notion row ✅
 */
 
 import { get, update } from "./database.js";
@@ -16,6 +17,9 @@ import getNested from "get-value";
 import { markdownToBlocks, markdownToRichText } from "@tryfabric/martian";
 import { NodeHtmlMarkdown } from "node-html-markdown";
 import { waitForMilliseconds } from "./utils.js";
+import ora from "ora";
+
+const spinner = ora("Loading unicorns");
 function getHeightTaskLink(index, parent = "OitGt6StRG") {
   return `https://height.app/OitGt6StRG/T-${index}`;
 }
@@ -354,4 +358,154 @@ async function Step_3_Add_Rows_to_Notion() {
     count++;
   }
 }
-Step_3_Add_Rows_to_Notion();
+// Step_3_Add_Rows_to_Notion();
+
+const doneTillCount = null;
+async function Step4_Handle_Nesting(tasks = []) {
+  console.log("Started", "Step4_Handle_Nesting");
+  const taskSet = Object.groupBy(tasks, (task) => task.id);
+  let count = 1;
+  for (let task of tasks) {
+    if (doneTillCount && count <= doneTillCount) {
+      if (doneTillCount === count) console.log("Skipped till count:", count);
+      count++;
+      continue;
+    }
+
+    const startRoundText = `Checking count: ${count}, T-${task.index}\n`;
+    // spinner.start(startRoundText);
+
+    const { parentTaskId = null } = task;
+    if (!parentTaskId) {
+      console.log("No work needed for count", count, `T-${task.index}`);
+      count++;
+      // spinner.stop();
+      continue;
+    }
+
+    console.log(parentTaskId, task.name);
+    const parentTask = taskSet[parentTaskId]?.[0];
+    // console.log({ parentTask });
+    if (!parentTask) {
+      console.log("PROBLEM: Parent task not found, problem", task.name);
+      spinner.stop();
+      count++;
+      return;
+    }
+    try {
+      const taskNotionPage = await getNotionPageByName(task.name);
+      const parentTaskName = parentTask.name;
+      let parentNotionPage = parentTask.notionPage ?? null;
+      if (!parentNotionPage) {
+        parentNotionPage = await getNotionPageByName(parentTaskName);
+        parentTask.notionPage = parentNotionPage;
+      }
+
+      const updateStartingString = `Setting "${taskNotionPage.properties.Name.title[0].plain_text}"'s parent to "${parentNotionPage.properties.Name.title[0].plain_text}"`;
+      // console.log(startingString);
+      spinner.start(updateStartingString);
+
+      await updateNotionPage(taskNotionPage.id, {
+        "Parent item": {
+          relation: [
+            {
+              id: parentNotionPage.id,
+            },
+          ],
+        },
+      });
+    } catch (error) {
+      // console.log(error);
+      console.log(`Error at index: T-${task.index} `);
+      count++;
+      spinner.stopAndPersist();
+      return;
+    }
+    spinner.stop();
+    console.log(`Success count:${count}, index: T-${task.index} `);
+    await waitForMilliseconds(100);
+
+    count++;
+  }
+
+  console.log("Ended", "Step4_Handle_Nesting");
+}
+
+async function getNotionPageByName(name) {
+  const [err, resp] = await to(
+    $axios.post(
+      `https://api.notion.com/v1/databases/${process.env.HEIGHT_DESTINATION_DB}/query`,
+      {
+        filter: {
+          // or: [
+          //   {
+          //     property: "In stock",
+          //     checkbox: {
+          //       equals: true,
+          //     },
+          //   },
+          //   {
+          //     property: "Cost of next trip",
+          //     number: {
+          //       greater_than_or_equal_to: 2,
+          //     },
+          //   },
+          // ],
+          property: "Name",
+          rich_text: {
+            contains: name,
+          },
+        },
+      }
+    )
+  );
+  // console.log(resp.data.results[0]?.properties.Name.title[0].plain_text);
+  if (resp) return resp.data.results[0];
+  throw err;
+}
+
+async function updateNotionPage(pageId, payload) {
+  const [err, resp] = await to(
+    $axios.patch(`https://api.notion.com/v1/pages/${pageId}`, {
+      properties: {
+        ...payload,
+      },
+    })
+  );
+  // console.log(resp.data);
+  if (resp) return resp;
+  throw err;
+}
+
+// async function setParentPage(pageId, parentPageId) {
+//   const [err, resp] = await to(
+//     $axios.patch(`https://api.notion.com/v1/pages/${pageId}`, {
+//       properties: {
+//         ...payload,
+//       },
+//     })
+//   );
+//   // console.log(resp.data);
+//   if (resp) return resp;
+//   throw err;
+// }
+
+// getNotionPageByName("Third page");
+
+// Step4_Handle_Nesting();
+// updateNotionPage("49d8e7aa150e49788c1eb9efd039a18d", {
+//   // OldAppLink: { rich_text: [{ type: "text", text: { content: "uyd2qd" } }] },
+//   "Parent item": {
+//     relation: [
+//       {
+//         id: "a4acd766bdc949fbbf6e999002d17566",
+//         // type: "text",
+//         // text: { content: "a4acd766bdc949fbbf6e999002d17566" },
+//       },
+//     ],
+//   },
+// });
+
+Step4_Handle_Nesting(tasks);
+
+// getNotionPageByName("Join a gym");
