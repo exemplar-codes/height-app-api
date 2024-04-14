@@ -1,11 +1,13 @@
 /*
-    1. having gotten tasks, hydrate each one with the its comments. ✅
-    2. Convert the tasks array from height format to tasks array in Notion format
+    1. ✅ use the Height API(https://height-api.xyz/openapi/#tag/Tasks/operation/searchTasks) and fetch all tasks into MongoDB
+      use MongoDB compass to explore this data, and save API calls too
+    2. having gotten tasks, hydrate each one with the its comments. ✅
+    3. Convert the tasks array from height format to tasks array in Notion format
         1. Take care of basic attributes ✅
         2. Take care of comments - will become side page ✅
         3. Take care of height attributes, have to take care of all. ✅
-    3. Hit Notion API and insert rows ✅
-    4. Fix nesting, by setting parent for each Notion row ✅
+    4. Hit Notion API and insert rows ✅
+    5. Fix nesting, by setting parent for each Notion row ✅
 */
 
 import { get, update } from "./database.js";
